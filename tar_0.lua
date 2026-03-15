@@ -13,6 +13,7 @@ local function find_input_files(folder)
 end
 
 -- process input file
+
 local function read_file(file_name, folder_path)
     counter = 0
     CURRENT_FILE_NAME = string.gsub(file_name, "%.vm$", "")
@@ -22,29 +23,31 @@ local function read_file(file_name, folder_path)
         local words = {}
 
         for w in string.gmatch(line, "%S+") do
-             table.insert(words, w)
-         end
-            handleAdd()
-        elseif splited_line[1] == "sub" then
-            handleSub()
-        elseif splited_line[1] == "neg" then
-            handlNeg()
-        elseif splited_line[1] == "eq" then
-            handleEq()
-        elseif splited_line[1] == "gt" then
-            handleGt()
-        elseif splited_line[1] == "lt" then
-            handleLt()
-        elseif splited_line[1] == "push" then
-            handlePush(splited_line[2], splited_line[3])
-        elseif splited_line[1] == "pop" then
-            handlePop(splited_line[2], splited_line[3])
+            table.insert(words, w)
         end
 
+        if words[1] == "add" then
+            handleAdd()
+        elseif words[1] == "sub" then
+            handleSub()
+        elseif words[1] == "neg" then
+            handlNeg()
+        elseif words[1] == "eq" then
+            handleEq()
+        elseif words[1] == "gt" then
+            handleGt()
+        elseif words[1] == "lt" then
+            handleLt()
+        elseif words[1] == "push" then
+            handlePush(words[2], words[3])
+        elseif words[1] == "pop" then
+            handlePop(words[2], words[3])
+        end
     end
     
     file:close()
 end
+    
 
 local function main()
     -- Get the input folder from command line arguments
