@@ -50,7 +50,7 @@ end
     
 
 local function main()
-    OUTPUT_FILE = nil
+    output_file = nil
     -- Get the input folder from command line arguments
     local folder_path = arg[1]
     if folder_path == nil then
