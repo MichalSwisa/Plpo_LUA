@@ -19,8 +19,11 @@ local function read_file(file_name, folder_path)
     local file = io.open(folder_path .. "\\" .. file_name, "r")
 
     for line in file:lines() do
-        splited_line = string.gmatch(line, "%S+")
-        if splited_line[1] == "add" then
+        local words = {}
+
+        for w in string.gmatch(line, "%S+") do
+             table.insert(words, w)
+         end
             handleAdd()
         elseif splited_line[1] == "sub" then
             handleSub()
