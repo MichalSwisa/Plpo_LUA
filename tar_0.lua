@@ -44,6 +44,19 @@ local function handleLt()
     output_file:write("counter: " .. counter .. "\n")
 end
 
+local function handlePush(segment, index)
+    output_file:write("command: push segment " .. segment .. " index " .. index .. "\n")
+end
+
+local function handlePop(segment, index)
+    output_file:write("command: pop segment " .. segment .. " index " .. index .. "\n")
+end
+
+
+
+
+
+
 -- process input file
 
 local function read_file(file_name, folder_path)
