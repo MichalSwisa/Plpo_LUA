@@ -26,6 +26,24 @@ local function handlNeg()
     output_file:write("command: neg\n")
 end
 
+local function handleEq()
+    counter = counter + 1
+    output_file:write("command: eq\n")
+    output_file:write("counter: " .. counter .. "\n")
+end
+
+local function handleGt()
+    counter = counter + 1
+    output_file:write("command: gt\n")
+    output_file:write("counter: " .. counter .. "\n")
+end
+
+local function handleLt()
+    counter = counter + 1
+    output_file:write("command: lt\n")
+    output_file:write("counter: " .. counter .. "\n")
+end
+
 -- process input file
 
 local function read_file(file_name, folder_path)
