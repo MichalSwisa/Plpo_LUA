@@ -1,3 +1,5 @@
+
+--Ruth Ulman 325442259 Mihal swissa 
 local function find_input_files(folder)
     local files = {}
 
