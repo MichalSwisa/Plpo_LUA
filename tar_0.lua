@@ -47,7 +47,21 @@ local function read_file(file_name, folder_path)
     
     file:close()
 end
-    
+
+-- handlers
+
+local function handleAdd()
+    output_file:write("command: add\n")
+end
+
+local function handleSub()
+    output_file:write("command: sub\n")
+end
+
+local function handlNeg()
+    output_file:write("command: neg\n")
+end
+
 
 local function main()
     output_file = nil
