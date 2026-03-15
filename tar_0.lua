@@ -50,6 +50,7 @@ end
     
 
 local function main()
+    OUTPUT_FILE = nilד
     -- Get the input folder from command line arguments
     local folder_path = arg[1]
     if folder_path == nil then
@@ -71,7 +72,7 @@ local function main()
     local output_file_path = folder_path .. "\\" .. output_file_name
 
     -- Create the output file
-    local output_file = io.open(output_file_path, "w")
+     output_file = io.open(output_file_path, "w")
     if output_file == nil then
         print("Failed to create output file: " .. output_file_path)
         return
