@@ -19,41 +19,180 @@ end
 
 -- handlers
 local function handleAdd()
-    output_file:write("command: add\n")
+    output_file:write(
+    [[// add
+    @SP
+    A=M-1
+    D=M
+    A=A-1
+    M=M+D
+    @SP
+    M=M-1
+
+    ]])
 end
 
 local function handleSub()
-    output_file:write("command: sub\n")
+    output_file:write(
+    [[// sub
+    @SP
+    A=M-1
+    D=M
+    A=A-1
+    M=M-D
+    @SPM=M-1
+
+    ]])
 end
 
 local function handlNeg()
-    output_file:write("command: neg\n")
+    output_file:write(
+    [[// neg
+    @SP
+    A=M-1
+    D=M
+    M=-D
+
+    ]])
 end
 
 local function handleEq()
     counter = counter + 1
-    output_file:write("command: eq\n")
-    output_file:write("counter: " .. counter .. "\n")
+    output_file:write(string.format(
+    [[// eq
+    @SP
+    A=M-1
+    D=M
+    A=A-1
+    D=D-M
+    @IF_TRUE%d
+    D;JEQ
+    D=0 //push 0 (false)
+    @SP
+    A=M-1
+    A=A-1
+    M=D
+    @IF_FALSE%d 
+    0;JMP
+    (IF_TRUE%d) 
+    D=-1 //push -1 (true)
+    @SP
+    A=M-1
+    A=A-1
+    M=D
+    (IF_FALSE%d)
+    @SP
+    M=M-1
+
+    ]], counter))
 end
 
 local function handleGt()
     counter = counter + 1
-    output_file:write("command: gt\n")
-    output_file:write("counter: " .. counter .. "\n")
+    output_file:write(string.format(
+    [[// gt
+    @SP
+    A=M-1
+    D=M
+    A=A-1
+    D=D-M
+    @IF_TRUE%d
+    D;JLT
+    D=0 
+    @SP
+    A=M-1
+    A=A-1
+    M=D
+    @IF_FALSE%d 
+    0;JMP
+    (IF_TRUE%d) 
+    D=-1
+    @SP
+    A=M-1
+    A=A-1
+    M=D
+    (IF_FALSE%d)
+    @SP
+    M=M-1
+
+    ]], counter))
 end
 
 local function handleLt()
     counter = counter + 1
-    output_file:write("command: lt\n")
-    output_file:write("counter: " .. counter .. "\n")
+    output_file:write(string.format(
+    [[// lt
+    @SP
+    A=M-1
+    D=M
+    A=A-1
+    D=D-M
+    @IF_TRUE%d
+    D;JGT
+    D=0 //push 0 (false)
+    @SP
+    A=M-1
+    A=A-1
+    M=D
+    @IF_FALSE%d 
+    0;JMP
+    (IF_TRUE%d) 
+    D=-1 //push -1 (true)
+    @SP
+    A=M-1
+    A=A-1
+    M=D
+    (IF_FALSE%d)
+    @SP
+    M=M-1
+
+    ]], counter))
+end
+
+local function handleAnd()
+    output_file:write(
+    [[// and
+    @SP
+    A=M-1
+    D=M
+    A=A-1
+    M=M&D
+    @SP
+    M=M-1
+
+    ]])
+end
+
+local function handleOr()
+    output_file:write(
+    [[// or
+    @SP
+    A=M-1
+    D=M
+    A=A-1
+    M=D|M
+    @SP
+    M=M-1
+
+    ]])
+end
+
+local function handleNot()
+    output_file:write(
+    [[// not
+    @SP
+    A=M-1
+    M=!M
+
+    ]])
 end
 
 local function handlePush(segment, index)
-    output_file:write("command: push segment " .. segment .. " index " .. index .. "\n")
+    output_file:write("// push ".. segment .. " " .. index .. "\n")
 end
 
 local function handlePop(segment, index)
-    output_file:write("command: pop segment " .. segment .. " index " .. index .. "\n")
+    output_file:write("// pop ".. segment .. " " .. index .. "\n")
 end
 
 
@@ -87,6 +226,12 @@ local function read_file(file_name, folder_path)
             handleGt()
         elseif words[1] == "lt" then
             handleLt()
+        elseif words[1] == "and" then
+            handleAnd()
+        elseif words[1] == "or" then
+            handleOr()
+        elseif words[1] == "not" then
+            handleNot()
         elseif words[1] == "push" then
             handlePush(words[2], words[3])
         elseif words[1] == "pop" then
@@ -122,7 +267,7 @@ local function main()
     local output_file_path = folder_path .. "\\" .. output_file_name
 
     -- Create the output file
-     output_file = io.open(output_file_path, "w")
+    output_file = io.open(output_file_path, "w")
     if output_file == nil then
         print("Failed to create output file: " .. output_file_path)
         return
