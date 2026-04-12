@@ -188,11 +188,104 @@ local function handleNot()
 end
 
 local function handlePush(segment, index)
-    output_file:write("// push ".. segment .. " " .. index .. "\n")
-end
+    local intIndex = tonumber(index)
+    local type = ""
 
+    if segment == "constant" then
+        output_file:write(string.format(
+        [[// push constant %s
+        @%s
+        D=A
+        @SP
+        A=M
+        M=D
+        @SP
+        M=M+1
+
+        ]], index, index))
+    elseif segment == "temp" then
+        intIndex = intIndex + 5
+        output_file:write(string.format(
+        [[// push temp %s
+        @%d
+        D=M
+        @SP
+        A=M
+        M=D
+        @SP
+        M=M+1
+
+        ]], index, intIndex))
+
+    elseif segment == "local" then
+        type = "LCL"
+    elseif segment == "argument" then
+        type = "ARG"
+    elseif segment == "this" then
+        type = "THIS"
+    elseif segment == "that" then
+        type = "THAT"
+    end
+
+    output_file:write(string.format(
+    [[// push %s %s
+    @%s
+    D=A
+    @%s
+    A=M+d
+    D=M
+    @SP
+    A=M
+    M=D
+    @SP
+    M=M+1
+
+    ]], segment, index, index, type))
+end
+    
 local function handlePop(segment, index)
-    output_file:write("// pop ".. segment .. " " .. index .. "\n")
+    local intIndex = tonumber(index)
+    local loop = ""
+    local type = ""
+    for i = 1, intIndex do
+        loop = loop .. "A=A+1\n"
+    end
+    if segment == "temp" then
+        intIndex = intIndex + 5
+        output_file:write(string.format(
+        [[// pop temp %s
+        @SP
+        A=M-1
+        D=M
+        @%d
+        M=D
+        @SP
+        M=M-1
+
+        ]], index, intIndex))
+    elseif segment == "local" then
+        type = "LCL"
+    elseif segment == "argument" then
+        type = "ARG"
+    elseif segment == "this" then
+        type = "THIS"
+    elseif segment == "that" then
+        type = "THAT"
+    end
+    output_file:write(string.format(
+    [[// pop %s %s
+    @SP
+    A=M-1
+    D=M
+    @%s
+    A=M
+    %s
+    M=D
+    @SP
+    M=M-1
+
+    ]], segment, index, type, loop))
+    
 end
 
 
