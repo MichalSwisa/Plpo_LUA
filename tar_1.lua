@@ -25,7 +25,7 @@ local function handleAdd()
     A=M-1
     D=M
     A=A-1
-    M=M+D
+    M=D+M
     @SP
     M=M-1
 
@@ -40,7 +40,8 @@ local function handleSub()
     D=M
     A=A-1
     M=M-D
-    @SPM=M-1
+    @SP
+    M=M-1
 
     ]])
 end
@@ -84,7 +85,7 @@ local function handleEq()
     @SP
     M=M-1
 
-    ]], counter))
+    ]], counter, counter, counter, counter))
 end
 
 local function handleGt()
@@ -115,7 +116,7 @@ local function handleGt()
     @SP
     M=M-1
 
-    ]], counter))
+    ]], counter, counter, counter, counter))
 end
 
 local function handleLt()
@@ -146,7 +147,7 @@ local function handleLt()
     @SP
     M=M-1
 
-    ]], counter))
+    ]], counter, counter, counter, counter))
 end
 
 local function handleAnd()
@@ -216,7 +217,36 @@ local function handlePush(segment, index)
         M=M+1
 
         ]], index, intIndex))
+    elseif segment == "pointer" then
+        if index == "0" then
+            type = "THIS"
+        else
+            type = "THAT"
+        end
+        output_file:write(string.format(
+            [[// push pointer %s
+            @%s
+            D=M
+            @SP
+            A=M
+            M=D
+            @SP
+            M=M+1
 
+            ]], index, type))
+    elseif segment == "static" then
+        output_file:write(string.format(
+        [[// push static %s
+        @%s.%s
+        D=M
+        @SP
+        A=M
+        M=D
+        @SP
+        M=M+1
+
+
+        ]], index, CURRENT_FILE_NAME, index))   
     elseif segment == "local" then
         type = "LCL"
     elseif segment == "argument" then
@@ -227,20 +257,22 @@ local function handlePush(segment, index)
         type = "THAT"
     end
 
-    output_file:write(string.format(
-    [[// push %s %s
-    @%s
-    D=A
-    @%s
-    A=M+d
-    D=M
-    @SP
-    A=M
-    M=D
-    @SP
-    M=M+1
+    if segment ~= "constant" and segment ~= "temp" and segment ~= "pointer" and segment ~= "static" then
+        output_file:write(string.format(
+        [[// push %s %s
+        @%s
+        D=A
+        @%s
+        A=M+D
+        D=M
+        @SP
+        A=M
+        M=D
+        @SP
+        M=M+1
 
-    ]], segment, index, index, type))
+        ]], segment, index, index, type))
+    end
 end
     
 local function handlePop(segment, index)
@@ -263,6 +295,35 @@ local function handlePop(segment, index)
         M=M-1
 
         ]], index, intIndex))
+    elseif segment == "pointer" then
+        if index == "0" then
+            type = "THIS"
+        else
+            type = "THAT"
+        end
+        output_file:write(string.format(
+            [[// pop pointer %s
+            @SP
+            A=M-1
+            D=M
+            @%s
+            M=D
+            @SP
+            M=M-1
+
+            ]], index, type))   
+    elseif segment == "static" then
+        output_file:write(string.format(
+        [[// pop static %s
+        @SP
+        M=M-1
+        A=M
+        D=M
+        @%s.%s
+        M=D
+
+
+        ]], index, CURRENT_FILE_NAME, index))  
     elseif segment == "local" then
         type = "LCL"
     elseif segment == "argument" then
@@ -272,25 +333,23 @@ local function handlePop(segment, index)
     elseif segment == "that" then
         type = "THAT"
     end
-    output_file:write(string.format(
-    [[// pop %s %s
-    @SP
-    A=M-1
-    D=M
-    @%s
-    A=M
-    %s
-    M=D
-    @SP
-    M=M-1
+    if segment ~= "temp" and segment ~= "pointer" and segment ~= "static" then
+        output_file:write(string.format(
+        [[// pop %s %s
+        @SP
+        A=M-1
+        D=M
+        @%s
+        A=M
+        %s
+        M=D
+        @SP
+        M=M-1
 
-    ]], segment, index, type, loop))
+        ]], segment, index, type, loop))
+    end
     
 end
-
-
-
-
 
 
 -- process input file
