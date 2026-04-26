@@ -6,10 +6,12 @@
 local function find_input_files(folder)
     local files = {}
 
-    local handle = io.popen('dir "' .. folder .. '\\*.vm" /b')
+    local handle = io.popen('ls "' .. folder .. '"')
 
     for file in handle:lines() do
-        table.insert(files, file)
+        if file:match("%.vm$") then
+           table.insert(files, file)
+         end
     end
 
     handle:close()
@@ -275,6 +277,8 @@ local function handlePush(segment, index)
     end
 end
     
+
+
 local function handlePop(segment, index)
     local intIndex = tonumber(index)
     local loop = ""
@@ -352,45 +356,302 @@ local function handlePop(segment, index)
 end
 
 
+
+local function handleLabel(label)
+    local prefix = CURRENT_FUNCTION ~= "" and CURRENT_FUNCTION or CURRENT_FILE_NAME
+
+    output_file:write(string.format(
+    [[// label %s
+(%s$%s)
+
+    ]], label, prefix, label))
+end
+
+
+
+
+local function handleGoto(label)
+    local prefix = CURRENT_FUNCTION ~= "" and CURRENT_FUNCTION or CURRENT_FILE_NAME
+
+    output_file:write(string.format(
+    [[// goto %s
+@%s$%s
+0;JMP
+
+    ]], label, prefix, label))
+end
+
+
+
+local function handleFunction(name, k)
+    CURRENT_FUNCTION = name
+
+    output_file:write(string.format(
+    [[// function %s %s
+(%s)
+]], name, k, name))
+
+    k = tonumber(k)
+
+    for i = 1, k do
+        handlePush("constant", "0")
+    end
+end
+
+
+
+local function handleCall(name, n)
+    call_counter = call_counter + 1
+    local return_label = name .. "$ret." .. call_counter
+
+    -- push return address
+    output_file:write(string.format([[
+@%s
+D=A
+@SP
+A=M
+M=D
+@SP
+M=M+1
+]], return_label))
+
+    -- push LCL
+    output_file:write([[
+@LCL
+D=M
+@SP
+A=M
+M=D
+@SP
+M=M+1
+]])
+
+    -- push ARG
+    output_file:write([[
+@ARG
+D=M
+@SP
+A=M
+M=D
+@SP
+M=M+1
+]])
+
+    -- push THIS
+    output_file:write([[
+@THIS
+D=M
+@SP
+A=M
+M=D
+@SP
+M=M+1
+]])
+
+    -- push THAT
+    output_file:write([[
+@THAT
+D=M
+@SP
+A=M
+M=D
+@SP
+M=M+1
+]])
+
+    -- ARG = SP - n - 5
+    output_file:write(string.format([[
+@SP
+D=M
+@%d
+D=D-A
+@5
+D=D-A
+@ARG
+M=D
+]], tonumber(n)))
+
+    -- LCL = SP
+    output_file:write([[
+@SP
+D=M
+@LCL
+M=D
+]])
+
+    -- goto function
+    output_file:write(string.format([[
+@%s
+0;JMP
+(%s)
+]], name, return_label))
+end
+
+
+
+local function handleReturn()
+    output_file:write([[
+// return
+
+// FRAME = LCL
+@LCL
+D=M
+@R13
+M=D
+
+// RET = *(FRAME - 5)
+@5
+A=D-A
+D=M
+@R14
+M=D
+
+// *ARG = pop()
+@SP
+M=M-1
+A=M
+D=M
+@ARG
+A=M
+M=D
+
+// SP = ARG + 1
+@ARG
+D=M+1
+@SP
+M=D
+
+// THAT = *(FRAME - 1)
+@R13
+AM=M-1
+D=M
+@THAT
+M=D
+
+// THIS = *(FRAME - 2)
+@R13
+AM=M-1
+D=M
+@THIS
+M=D
+
+// ARG = *(FRAME - 3)
+@R13
+AM=M-1
+D=M
+@ARG
+M=D
+
+// LCL = *(FRAME - 4)
+@R13
+AM=M-1
+D=M
+@LCL
+M=D
+
+// goto RET
+@R14
+A=M
+0;JMP
+
+]])
+end
+
+
+local function handleIfGoto(label)
+    local prefix = CURRENT_FUNCTION ~= "" and CURRENT_FUNCTION or CURRENT_FILE_NAME
+
+    output_file:write(string.format(
+    [[// if-goto %s
+@SP
+M=M-1
+A=M
+D=M
+@%s$%s
+D;JNE
+
+    ]], label, prefix, label))
+end
+
+
 -- process input file
 
 local function read_file(file_name, folder_path)
     counter = 0
     CURRENT_FILE_NAME = string.gsub(file_name, "%.vm$", "")
-    local file = io.open(folder_path .. "\\" .. file_name, "r")
+    local file = io.open(folder_path .. "/" .. file_name, "r")
 
     for line in file:lines() do
-        local words = {}
 
+        
+        if line:match("^%s*//") or line:match("^%s*$") then
+            goto continue
+        end
+
+        local words = {}
         for w in string.gmatch(line, "%S+") do
             table.insert(words, w)
         end
 
+        if #words == 0 then
+           goto continue
+        end
+
         if words[1] == "add" then
             handleAdd()
+
         elseif words[1] == "sub" then
             handleSub()
+
         elseif words[1] == "neg" then
             handlNeg()
+
         elseif words[1] == "eq" then
             handleEq()
+
         elseif words[1] == "gt" then
             handleGt()
+
         elseif words[1] == "lt" then
             handleLt()
+
         elseif words[1] == "and" then
             handleAnd()
+
         elseif words[1] == "or" then
             handleOr()
+
         elseif words[1] == "not" then
             handleNot()
+
         elseif words[1] == "push" then
             handlePush(words[2], words[3])
+
         elseif words[1] == "pop" then
             handlePop(words[2], words[3])
+
+        elseif words[1] == "label" then
+            handleLabel(words[2])
+
+        elseif words[1] == "goto" then
+            handleGoto(words[2])
+
+        elseif words[1] == "if-goto" then
+            handleIfGoto(words[2])
+
+        elseif words[1] == "function" then
+            handleFunction(words[2], words[3])
+
+        elseif words[1] == "call" then
+            handleCall(words[2], words[3])
+
+        elseif words[1] == "return" then
+            handleReturn()
         end
+
+        ::continue::
     end
-    
+
     file:close()
 end
 
@@ -399,6 +660,7 @@ end
 
 local function main()
     output_file = nil
+
     -- Get the input folder from command line arguments
     local folder_path = arg[1]
     if folder_path == nil then
@@ -406,36 +668,57 @@ local function main()
         return
     end
 
-    -- Find all .vm file's paths in the input folder
+    -- Find all .vm files in the input folder
     local files = find_input_files(folder_path)
     if files == nil or #files == 0 then
         print("No .vm files found in the specified folder.")
         return
     end
 
-    -- Extract the folder name from the input path to create the output file name
-    local folder_name = string.match(folder_path, "([^\\]+)$")
-    local output_file_name = folder_name.. ".asm"
-    local output_file_path = folder_path .. "\\" .. output_file_name
+    -- Extract folder name for output file
+    local folder_name = string.match(folder_path, "([^/]+)$")
+    local output_file_name = folder_name .. ".asm"
+    local output_file_path = folder_path .. "/" .. output_file_name
 
-    -- Create the output file
+    -- Create output file
     output_file = io.open(output_file_path, "w")
     if output_file == nil then
         print("Failed to create output file: " .. output_file_path)
         return
     end
 
+   
+    local has_sys = false
+    for _, file_name in ipairs(files) do
+        if file_name == "Sys.vm" then
+            has_sys = true
+        end
+    end
+
+    
+    if has_sys then
+        output_file:write([[
+@256
+D=A
+@SP
+M=D
+
+]])
+        handleCall("Sys.init", 0)
+    end
+
     -- Process each .vm file
     for _, file_name in ipairs(files) do
         read_file(file_name, folder_path)
-        print("End of input file:" ..file_name)
+        print("End of input file: " .. file_name)
     end
 
-    -- Close the output file
-    print("Output file is ready:" ..output_file_name)
+    -- Close output file
+    print("Output file is ready: " .. output_file_name)
     output_file:close()
-
 end
 
 CURRENT_FILE_NAME = nil
+CURRENT_FUNCTION = ""
+call_counter = 0
 main()
