@@ -89,6 +89,13 @@ local function escape_xml(value)
     return value
 end
 
+local function unescape_xml(value)
+    value = string.gsub(value, "&lt;", "<")
+    value = string.gsub(value, "&gt;", ">")
+    value = string.gsub(value, "&amp;", "&")
+    return value
+end
+
 local function is_digit(ch)
     return ch ~= nil and ch:match("%d") ~= nil
 end
@@ -264,6 +271,38 @@ local function create_tokens_xml(tokens, output_path)
 
     write_line(output_file, "</tokens>")
     output_file:close()
+end
+
+------------------------------------------------------------
+-- Read tokens back from xxxT.xml
+------------------------------------------------------------
+
+local function read_tokens_from_xml(tokens_path)
+    local tokens = {}
+    local file = io.open(tokens_path, "r")
+
+    if file == nil then
+        print("Failed to open tokens file: " .. tokens_path)
+        return tokens
+    end
+
+    for line in file:lines() do
+        -- Match lines like:
+        -- <keyword> class </keyword>
+        -- <identifier> Main </identifier>
+        -- <symbol> &lt; </symbol>
+        local token_type, token_value = line:match("^%s*<([%a]+)>%s*(.-)%s*</%1>%s*$")
+
+        if token_type ~= nil then
+            table.insert(tokens, {
+                type = token_type,
+                value = unescape_xml(token_value)
+            })
+        end
+    end
+
+    file:close()
+    return tokens
 end
 
 ------------------------------------------------------------
@@ -701,13 +740,28 @@ local function analyze_file(folder_path, file_name)
         return
     end
 
+    --------------------------------------------------------
     -- Part 1: Tokenizing
+    -- Jack file -> xxxT.xml
+    --------------------------------------------------------
+
     local tokens = tokenize_content(content)
     create_tokens_xml(tokens, tokens_output_path)
     print("Created tokens file: " .. base_name .. "T.xml")
 
+    --------------------------------------------------------
     -- Part 2: Parsing
-    local parser = Parser:new(tokens, parse_output_path)
+    -- xxxT.xml -> tokens table -> xxx.xml
+    --------------------------------------------------------
+
+    local tokens_from_xml = read_tokens_from_xml(tokens_output_path)
+
+    if tokens_from_xml == nil or #tokens_from_xml == 0 then
+        print("No tokens were read from tokens file: " .. tokens_output_path)
+        return
+    end
+
+    local parser = Parser:new(tokens_from_xml, parse_output_path)
 
     if parser.output_file == nil then
         print("Failed to create parse file: " .. parse_output_path)
